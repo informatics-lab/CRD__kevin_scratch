@@ -4,18 +4,22 @@ import copy
 import xarray as xr
 import numpy as np
 
-def file_to_cube(filename, filepath, constraints={}):
+
+## FILES -> IRIS
+def file_to_cube(filename, filepath, constraints={}, verbose=True):
     # Load a cube from a file
     cube = iris.load_cube(os.path.join(filepath, filename), iris.AttributeConstraint(**constraints))
-    print(f'Cube loaded from {filename}')
+    if verbose: print(f'Cube loaded from {filename}')
     return cube
 
-def file_to_cubelist(filename, filepath, constraints={}):
+def file_to_cubelist(filename, filepath, constraints={}, verbose=True):
     # Load a cube from a file
     cubelist = iris.load(os.path.join(filepath, filename), iris.AttributeConstraint(**constraints))
-    print(f'Cubelist loaded from {filename}')
+    if verbose: print(f'Cubelist loaded from {filename}')
     return cubelist
 
+
+## IRIS -> XARRAY
 def cube_to_da(cube):
     # Convert Iris cube to Xarray DataArray
     return xr.DataArray.from_iris(cube)
@@ -30,25 +34,45 @@ def cubelist_to_dalist(cubelist):
     for cube in cubelist:
         dalist.append(cube_to_da(cube))
     return dalist
-    
-def ds_to_zarr(dataset, zarr_store, chunks={'time':10, 'grid_latitude':219, 'grid_longitude':286}, append_dim='time', **kwargs):
+
+def cubelist_to_dataset(cubelist):
+    # Convert Iris cubelist to Xarray Dataset
+    dalist = cubelist_to_dalist(cubelist)
+    return xr.merge(dalist)
+
+
+## XARRAY + IRIS -> ZARR
+def ds_to_zarr(dataset, zarr_store, chunks=None, append_dim='time', verbose=False, **kwargs):
     # Write dataset to new zarr store
     # OR append dataset to an existing zarr store
     if chunks:
         dataset = dataset.chunk(chunks=chunks)
     if os.path.isdir(zarr_store):
         dataset.to_zarr(zarr_store, consolidated=True, append_dim=append_dim, **kwargs)
-        print(f'Appended dataset to {zarr_store}')
+        if verbose: print(f'Appended dataset to {zarr_store}')
     else:
         dataset.to_zarr(zarr_store, mode='w', consolidated=True, **kwargs)
-        print(f'Written dataset to {zarr_store}')
+        if verbose: print(f'Written dataset to {zarr_store}')
 
+def cubelist_to_zarr(cubelist, cubenames=None, coordname_mapping=None, **kwargs):
+    # Write cubelist to new zarr store
+    # OR append cubelist to an existing zarr store
+    if cubenames or coordname_mapping:
+        rename_cubes(cubelist, cubenames, coordname_mapping, dryrun=False, verbose=False)
+    
+    dataset = cubelist_to_dataset(cubelist)
+    ds_to_zarr(dataset, **kwargs)
+
+    
+## TIMES FROM DATA
 def datetimes_from_cube(cube):
     return xr.DataArray.from_iris(cube).time.data
 
 def datetimes_from_zarr(zarr_store):
     return xr.open_zarr(zarr_store).time.data
 
+
+## IRIS CUBE_NAME + COORD_NAME TOOLS
 def unique_coords_list(cubelist):
     unique = []
     for cube in cubelist:
