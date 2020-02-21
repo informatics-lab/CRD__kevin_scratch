@@ -4,6 +4,7 @@ import copy
 import xarray as xr
 import numpy as np
 
+import umdates_utils as um
 
 ## FILES -> IRIS
 def file_to_cube(filename, filepath, constraints={}, verbose=True):
@@ -151,3 +152,31 @@ def rename_cubes(cubelist, cubenames=None, new_coordnames=None, dryrun=False, ve
             elif dryrun or verbose:
                 print(f'  x {coord.name()}')
                 
+## TIMESTAMPS FROM FILENAMES
+def umstamp_from_filename(filename):
+    parts = filename.split('.')
+    return parts[1][2:]
+
+def filenames_to_datetimes(filenames, fmt='YYMDH'):
+    datetimes = [um.convertFromUMStamp(umstamp_from_filename(file), fmt) for file in filenames]
+    return np.array(datetimes)
+    
+def datetimes_to_timedeltas(datetimes):
+    return file_dates[1:]-file_dates[0:-1]
+    
+def timedeltas_to_days(timedeltas):
+    return np.array([td.days for td in timedeltas])
+
+def plot_td_hist(td, frequency='Daily'):
+    plt.hist(td, bins=np.arange(2.5, 30.5), log=True)
+    plt.gcf().set_size_inches(15, 5)
+    plt.xticks(np.arange(2, 31))
+    plt.xlabel('Days')
+    plt.ylabel('Number of timedeltas')
+    plt.title(f'Distribution of times between filenames: {frequency}')
+    plt.show()
+
+def freq_hist_plot(filenames, frequency='Daily'):
+    dtimes = filenames_to_datetimes(filenames)
+    td = timedeltas_to_days(datetimes_to_timedeltas(dtimes))
+    plot_td_hist(td, frequency=frequency)
