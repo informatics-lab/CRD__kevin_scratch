@@ -147,7 +147,7 @@ def precisD2(c):
     
     return conv
 
-def UMFileList(runid, startd, endd, freq, bunching=10):
+def UMFileList(runid, startd, endd, freq, bunching=1):
     ''' Give a (thoretical) list of UM date format files between 2 dates.
     Assuming no missing dates.
     
