@@ -1,0 +1,12 @@
+name: null
+channels:
+  - defaults
+dependencies:
+  - netcdftime
+  - iris
+  - xarray
+  - zarr
+  - ipykernel
+  - mo_pack
+prefix: /root/my-conda-envs/pangolin
+
